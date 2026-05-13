@@ -8,7 +8,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY share/server.py /app/server.py
-COPY run /app/run
+COPY share/run /app/run
 COPY xinetd.conf /etc/xinetd.conf
 COPY groth16-pok.xinetd /etc/xinetd.d/groth16-pok
 
