@@ -42,5 +42,7 @@ degenerate verifying key, not a single proof shape.
 6. Submit the signature as `(message, R, s)`, which was not blacklisted.
 7. Repeat for the second signature.
 
+[solver script is here](https://github.com/CCCTF-Place/crypto-chal-groth16-pok/blob/master/extra/solve.py)
+
 ## FLAG
 `CCCTF{0nTheSize0fPalringB4sedNonInteRactiveArguments_1s_da_paPer_of_GRoThl6_and_faaahhhhh__}`

@@ -39,5 +39,8 @@ pi_c = G1
 6. 送出未被黑名單擋下的簽章 `(message, R, s)`
 7. 對第二個簽章重複 1-6
 
+[solver script is here](https://github.com/CCCTF-Place/crypto-chal-groth16-pok/blob/master/extra/solve.py)
+
+
 ## FLAG
 `CCCTF{0nTheSize0fPalringB4sedNonInteRactiveArguments_1s_da_paPer_of_GRoThl6_and_faaahhhhh__}`
