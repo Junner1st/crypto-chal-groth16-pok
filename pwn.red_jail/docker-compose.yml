@@ -1,0 +1,12 @@
+services:
+  chal_groth16_pok:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bs-groth16-pok
+    privileged: true
+    ports:
+      - "1339:5000"
+    environment:
+      JAIL_ENV_FLAG: "CCCTF{0nTheSize0fPalringB4sedNonInteRactiveArguments_1s_da_paPer_of_GRoThl6_and_faaahhhhh__}"
+    restart: unless-stopped

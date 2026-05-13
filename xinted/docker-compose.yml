@@ -1,0 +1,9 @@
+services:
+  chal_groth16_pok:
+    build: .
+    container_name: bs-groth16-pok
+    ports:
+      - "1339:5000"
+    environment:
+      FLAG: "CCCTF{0nTheSize0fPalringB4sedNonInteRactiveArguments_1s_da_paPer_of_GRoThl6_and_faaahhhhh__}"
+    restart: unless-stopped
