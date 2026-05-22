@@ -1,5 +1,6 @@
 import hashlib
 import json
+import sys
 
 from py_ecc.bn128 import (
     FQ,
@@ -13,7 +14,8 @@ from py_ecc.bn128 import (
 )
 from pwn import context, remote
 
-HOST = "127.0.0.1"
+HOST = "10.13.8.12"
+# HOST = "127.0.0.1"
 PORT = 1339
 
 context.log_level = "error"
@@ -21,6 +23,21 @@ context.log_level = "error"
 Q = 170141183460469231731687303715884105727
 P = 19396094914493492417412352623610788052879
 G = 20769187434139310514121985316880384
+
+
+def log(message: str) -> None:
+    print(f"[*] {message}", file=sys.stderr, flush=True)
+
+
+def short_int(value: int, keep: int = 18) -> str:
+    text = str(int(value))
+    if len(text) <= keep * 2 + 5:
+        return text
+    return f"{text[:keep]}...{text[-keep:]} ({len(text)} digits)"
+
+
+def short_list(values: list[int]) -> str:
+    return "[" + ", ".join(short_int(value, keep=10) for value in values) + "]"
 
 
 def mod_q(x: int) -> int:
@@ -117,16 +134,21 @@ def command(io, line: str) -> dict:
 
 
 def main() -> None:
+    log(f"connecting to {HOST}:{PORT}")
     io = remote(HOST, PORT)
     try:
+        log("waiting for public parameters")
         banner = io.recvuntil(b"> ").decode(errors="ignore")
         pub = parse_public(banner)
         x_pub = int(pub["X"])
         vk = pub["verifying_key"]
+        log(f"parsed issuer public key X = {short_int(x_pub)}")
+        log(f"parsed Groth16 verifying key with {len(vk['ic'])} IC points")
 
         signatures = []
         for idx in range(2):
             message = f"groth16-pok-forged-{idx}"
+            log(f"signature {idx + 1}/2: requesting signing session")
             begin = command(io, "begin")
             if not begin.get("ok"):
                 raise RuntimeError(f"begin failed: {begin}")
@@ -134,25 +156,42 @@ def main() -> None:
             sid = int(begin["sid"])
             r = int(begin["R"])
             c = hash_challenge(message, r)
+            log(f"signature {idx + 1}/2: sid = {sid}")
+            log(f"signature {idx + 1}/2: real R = {short_int(r)}")
+            log(f"signature {idx + 1}/2: message = {message!r}")
+            log(f"signature {idx + 1}/2: c = H(message, R) = {short_int(c)}")
 
             dummy_r_blind = G
             if dummy_r_blind == r:
                 dummy_r_blind = pow(G, 2, P)
+            log(f"signature {idx + 1}/2: using dummy R_blind = {short_int(dummy_r_blind)}")
 
-            proof = forge_pok(public_inputs(r, x_pub, dummy_r_blind, c), vk)
+            inputs = public_inputs(r, x_pub, dummy_r_blind, c)
+            log(f"signature {idx + 1}/2: Groth16 public inputs = {short_list(inputs)}")
+            log(f"signature {idx + 1}/2: forging degenerate Groth16 proof")
+            proof = forge_pok(inputs, vk)
+            log(
+                f"signature {idx + 1}/2: proof pi_a.x = {short_int(proof['pi_a'][0])}, "
+                f"pi_a.y = {short_int(proof['pi_a'][1])}"
+            )
             issue_payload = {
                 "sid": sid,
                 "R_blind": dummy_r_blind,
                 "c_blind": c,
                 "proof": proof,
             }
+            log(f"signature {idx + 1}/2: sending issue request")
             issued = command(io, "issue " + json.dumps(issue_payload))
             if not issued.get("ok"):
                 raise RuntimeError(f"issue failed: {issued}")
+            log(f"signature {idx + 1}/2: received s_blind = {short_int(issued['s_blind'])}")
 
             signatures.append({"message": message, "R_blind": r, "s": int(issued["s_blind"])})
+            log(f"signature {idx + 1}/2: prepared redeemable signature with unissued R")
 
+        log("submitting two forged signatures")
         out = command(io, "submit " + json.dumps(signatures))
+        log("service response:")
         print(json.dumps(out, ensure_ascii=False))
     finally:
         io.close()
